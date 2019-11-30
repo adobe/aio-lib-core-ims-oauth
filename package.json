@@ -11,8 +11,16 @@
     "@adobe/aio-cna-core-ims": "^1.0.0"
   },
   "devDependencies": {
-    "eslint": "^5.16.0",
-    "globby": "^8.0.2"
+    "codecov": "^3.6.1",
+    "globby": "^8.0.2",
+    "eslint": "^6.2.2",
+    "eslint-config-standard": "^14.1.0",
+    "eslint-plugin-import": "^2.18.0",
+    "eslint-plugin-jest": "^23.0.2",
+    "eslint-plugin-node": "^10.0.0",
+    "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-standard": "^4.0.0",
+    "jest": "^24.8.0"
   },
   "engines": {
     "node": ">=8.0.0"
@@ -26,8 +34,9 @@
   "main": "./src/ims-oauth.js",
   "repository": "https://github.com/adobe/aio-cna-core-ims-oauth",
   "scripts": {
-    "posttest": "eslint .",
-    "test": "echo NO TESTS",
+    "lint": "eslint src test lib",
+    "unit-tests": "jest --config ./jest.config.js --maxWorkers=2",
+    "test": "npm run lint && npm run unit-tests",
     "version": "git add README.md"
   }
 }

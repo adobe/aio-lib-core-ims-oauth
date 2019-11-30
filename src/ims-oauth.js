@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Adobe. All rights reserved.
+Copyright 2019 Adobe. All rights reserved.
 This file is licensed to you under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License. You may obtain a copy
 of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -10,36 +10,37 @@ OF ANY KIND, either express or implied. See the License for the specific languag
 governing permissions and limitations under the License.
 */
 
-const Electron = require('./electron');
-const debug = require('debug')('@adobe/aio-cna-core-ims-oauth/ims-oauth');
+const Electron = require('./electron')
+const debug = require('debug')('@adobe/aio-cna-core-ims-oauth/ims-oauth')
 
 // The ims-login hook for OAuth2 (SUSI) is taking care of calling IMS
 // the function takes the
 
-function canSupportSync(configData) {
-    if (!configData) {
-        return false;
+function canSupportSync (configData) {
+  if (!configData) {
+    return false
+  }
+
+  const missingKeys = []
+  const requiredKeys = ['callback_url', 'client_id', 'client_secret', 'scope']
+
+  requiredKeys.forEach(key => {
+    if (!configData[key]) {
+      missingKeys.push(key)
     }
+  })
 
-    const missing_keys = [];
-    const required_keys = ['callback_url', 'client_id', 'client_secret', 'scope'];
-
-    required_keys.forEach(key => {
-        if (!configData[key]) {
-            missing_keys.push(key)
-        }
-    })
-
-    return missing_keys.length == 0;
+  return missingKeys
 }
 
-async function canSupport(configData) {
-    if (canSupportSync(configData)) {
-        return Promise.resolve(true);
-    } else {
-        // TODO: Indicate that this is not really an error but just a possibility
-        return Promise.reject(`OAuth2 not supported due to some missing properties: ${missing_keys}`);
-    }
+async function canSupport (configData) {
+  const missingKeys = canSupportSync(configData)
+  if (missingKeys.length === 0) {
+    return Promise.resolve(true)
+  } else {
+    // TODO: Indicate that this is not really an error but just a possibility
+    return Promise.reject(new Error(`OAuth2 not supported due to some missing properties: ${missingKeys}`))
+  }
 }
 
 // The result of the browser and proxy interaction, which can take values
@@ -50,7 +51,7 @@ async function canSupport(configData) {
 //         (1) if the user kills the browser before completing
 //         (2) if the access token cannot be generated after the user provided
 //             the credentials
-let webResult = undefined;
+let webResult
 
 /**
  * Called when the Electron app driving the SUSI flow terminates.
@@ -63,41 +64,41 @@ let webResult = undefined;
  *          which may be a string in the success case or an Error if the
  *          authorization code is not provided.
  */
-function electronCallback(result, state) {
-    debug("electronCallback(%o, %s)", result, state);
-    webResult = result ? result : new Error("No result received from web app");
-    debug("  > %o", webResult);
+function electronCallback (result, state) {
+  debug('electronCallback(%o, %s)', result, state)
+  webResult = result || new Error('No result received from web app')
+  debug('  > %o', webResult)
 }
 
-async function setupWeb(ims, config, state, force) {
-    debug("setupWeb(config=%o, state=%s, force=%s)", config, force);
-    const appUrl = ims.getSusiUrl(config.client_id, config.scope, config.callback_url, state);
-    debug("  > appUrl=%s", appUrl);
-    electron = new Electron(appUrl, config.callback_url, force).launch(electronCallback);
+async function setupWeb (ims, config, state, force) {
+  debug('setupWeb(config=%o, state=%s, force=%s)', config, force)
+  const appUrl = ims.getSusiUrl(config.client_id, config.scope, config.callback_url, state)
+  debug('  > appUrl=%s', appUrl)
+  return new Electron(appUrl, config.callback_url, force).launch(electronCallback)
 }
 
-async function checkWebResult() {
-    if (!webResult) {
-        debug("checkWebResult: No result yet, continue polling");
-        return new Promise(resolve => setTimeout(resolve.bind(null), 100)).then(checkWebResult);
-    } else if (webResult instanceof Error) {
-        debug("checkWebResult: Rejecting on error: %o", webResult);
-        return Promise.reject(webResult);
-    } else {
-        debug("checkWebResult: Resolving with code: %s", webResult);
-        return Promise.resolve(webResult);
-    }
+async function checkWebResult () {
+  if (!webResult) {
+    debug('checkWebResult: No result yet, continue polling')
+    return new Promise(resolve => setTimeout(resolve.bind(null), 100)).then(checkWebResult)
+  } else if (webResult instanceof Error) {
+    debug('checkWebResult: Rejecting on error: %o', webResult)
+    return Promise.reject(webResult)
+  } else {
+    debug('checkWebResult: Resolving with code: %s', webResult)
+    return Promise.resolve(webResult)
+  }
 }
 
-async function imsLogin(ims, config, force) {
-    const state = "oauth-imslogin-" + Date.now();
-    return canSupport(config)
-        .then(() => setupWeb(ims, config, state, force))
-        .then(checkWebResult)
-        .then(authorizationCode => ims.getAccessToken(authorizationCode, config.client_id, config.client_secret, config.scope))
+async function imsLogin (ims, config, force) {
+  const state = 'oauth-imslogin-' + Date.now()
+  return canSupport(config)
+    .then(() => setupWeb(ims, config, state, force))
+    .then(checkWebResult)
+    .then(authorizationCode => ims.getAccessToken(authorizationCode, config.client_id, config.client_secret, config.scope))
 }
 
 module.exports = {
-    supports: canSupportSync,
-    imsLogin
+  supports: canSupportSync,
+  imsLogin
 }
